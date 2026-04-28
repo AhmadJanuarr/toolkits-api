@@ -23,13 +23,13 @@ Mengubah format gambar dari satu format ke format lain (JPG, PNG, WebP).
 
 ```MD
 {
-    "status": 200,
-    "message": "Konversi berhasil",
-    "data": {
-        "original_file": "my-photo.jpg",
-        "result_path": "temp/processed/1709234567-my-photo.png",
-        "format": "png"
-    }
+  "data": {
+    "format": "jpg",
+    "original_file": "surface-laptop-5-stock-blue-abstract-dark-background-3840x2400-9055.jpg",
+    "result_path": "temp/processed/1772262263-surface-laptop-5-stock-blue-abstract-dark-background-3840x2400-9055.jpg"
+  },
+  "message": "Konversi berhasil",
+  "status": 200
 }
 ```
 

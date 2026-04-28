@@ -8,202 +8,239 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"toolkits/internal/config"
 	"toolkits/internal/services"
+	"toolkits/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	MaxFileSize = 5 << 20 // 5MB
-	UploadDir   = "./temp/uploads"
-)
-
-// Allowed formats whitelist
-var allowedFormats = map[string]bool{
-	"jpg":  true,
-	"jpeg": true,
-	"png":  true,
-	"webp": true,
+type ImageHandler struct {
+	config    *config.Config
+	semaphore chan struct{}
 }
 
-func ConvertImage(c *gin.Context) {
-	// 1. Validasi Input Form (Target Format)
-
-	targetFormat := strings.ToLower(c.PostForm("format"))
-	if targetFormat == "" || !allowedFormats[targetFormat] {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "Format target tidak valid atau tidak didukung (gunakan: jpg, jpeg, png, webp)",
-		})
-		return
+func NewImageHandler(cfg *config.Config, sem chan struct{}) *ImageHandler {
+	return &ImageHandler{
+		config:    cfg,
+		semaphore: sem,
 	}
+}
 
-	// 2. Menerima File
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "File tidak ditemukan atau tidak valid",
-			"error":   err.Error(),
-		})
-		return
-	}
+func (h *ImageHandler) ConvertImage(c *gin.Context) {
 
-	// 3. Validasi Ukuran File
-	if file.Size > MaxFileSize {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": fmt.Sprintf("Ukuran file tidak boleh lebih dari %d MB", MaxFileSize>>20),
-		})
-		return
-	}
+	select {
+	case h.semaphore <- struct{}{}:
+		defer func() { <-h.semaphore }()
 
-	// 4. Generate Nama File Aman (Mencegah Path Traversal & Overwrite)
-	// Format: timestamp-filename_asli.ext
-	safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
-	srcPath := filepath.Join(UploadDir, safeFilename)
+		targetFormat := strings.ToLower(c.PostForm("format"))
+		if targetFormat == "" || !utils.Contains(h.config.Image.AllowedFormats, targetFormat) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "Format target tidak valid atau tidak didukung (gunakan: jpg, jpeg, png, webp)",
+			})
+			return
+		}
 
-	// 5. Simpan File Sementara
-	if err := c.SaveUploadedFile(file, srcPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Gagal menyimpan file sementara",
-			"error":   err.Error(),
-		})
-		return
-	}
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "File tidak ditemukan atau tidak valid",
+				"error":   err.Error(),
+			})
+			return
+		}
 
-	// 6. Proses Konversi
-	resultPath, err := services.ProcessImageConversion(srcPath, targetFormat)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Gagal mengonversi gambar",
-			"error":   err.Error(),
-		})
+		if err := utils.ValidateImageFile(file); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": err.Error(),
+			})
+			return
+		}
+
+		if file.Size > h.config.Image.MaxFileSize {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": fmt.Sprintf("Ukuran file tidak boleh lebih dari %d MB", h.config.Image.MaxFileSize>>20),
+			})
+			return
+		}
+
+		safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
+		srcPath := filepath.Join(h.config.Storage.TempDir, safeFilename)
+
+		if err := c.SaveUploadedFile(file, srcPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Gagal menyimpan file sementara",
+				"error":   err.Error(),
+			})
+			return
+		}
 		defer os.Remove(srcPath)
+
+		// process image conversion
+		resultPath, err := services.ProcessImageConversion(srcPath, targetFormat)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Gagal mengonversi gambar",
+				"error":   err.Error(),
+			})
+			return
+		}
+
+		c.File(resultPath)
+
+	default:
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  http.StatusServiceUnavailable,
+			"message": "Server sibuk, coba lagi sebentar",
+		})
 		return
 	}
-
-	// 7. Response Sukses
-	c.JSON(http.StatusOK, gin.H{
-		"status":  http.StatusOK,
-		"message": "Konversi berhasil",
-		"data": gin.H{
-			"original_file": file.Filename,
-			"result_path":   resultPath,
-			"format":        targetFormat,
-		},
-	})
 }
 
-func CompressionImage(c *gin.Context) {
+func (h *ImageHandler) CompressionImage(c *gin.Context) {
 
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "File tidak ditemukan atau tidak valid",
-			"error":   err.Error(),
-		})
-		return
-	}
+	select {
+	case h.semaphore <- struct{}{}:
+		defer func() { <-h.semaphore }()
 
-	qualityStr := c.PostForm("quality")
-	if qualityStr == "" {
-		qualityStr = "80"
-	}
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "File tidak ditemukan atau tidak valid",
+				"error":   err.Error(),
+			})
+			return
+		}
 
-	quality, err := strconv.Atoi(qualityStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "Quality harus berupa angka",
-			"error":   err.Error(),
-		})
-		return
-	}
+		qualityStr := c.PostForm("quality")
+		if qualityStr == "" {
+			qualityStr = "80"
+		}
 
-	safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
-	srcPath := filepath.Join(UploadDir, safeFilename)
+		quality, err := strconv.Atoi(qualityStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "Quality harus berupa angka",
+				"error":   err.Error(),
+			})
+			return
+		}
+		if quality < h.config.Image.MinQuality || quality > h.config.Image.MaxQuality {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": fmt.Sprintf("Quality harus antara %d dan %d", h.config.Image.MinQuality, h.config.Image.MaxQuality),
+			})
+			return
+		}
 
-	if err := c.SaveUploadedFile(file, srcPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Gagal menyimpan file sementara",
-			"error":   err.Error(),
-		})
-		return
-	}
+		safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
+		srcPath := filepath.Join(h.config.Storage.UploadDir, safeFilename)
 
-	resultPath, err := services.ProcessImageCompression(srcPath, quality)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Gagal mengompres gambar",
-			"error":   err.Error(),
-		})
+		if err := c.SaveUploadedFile(file, srcPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Gagal menyimpan file sementara",
+				"error":   err.Error(),
+			})
+			return
+		}
 		defer os.Remove(srcPath)
-		return
-	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":  http.StatusOK,
-		"message": "Kompresi berhasil",
-		"data": gin.H{
-			"original_file": file.Filename,
-			"result_path":   resultPath,
-			"quality":       quality,
-		},
-	})
-}
+		resultPath, err := services.ProcessImageCompression(srcPath, quality)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Gagal mengompres gambar",
+				"error":   err.Error(),
+			})
+			return
+		}
 
-func ResizeImage(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": http.StatusBadRequest, "message": "File wajib diupload", "error": err.Error()})
-		return
-	}
+		c.File(resultPath)
 
-	widthStr := c.PostForm("width")
-	heightStr := c.PostForm("height")
-
-	width, errW := strconv.Atoi(widthStr)
-	height, errH := strconv.Atoi(heightStr)
-
-	if errW != nil || errH != nil || width <= 0 || height <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "Width dan Height harus berupa angka positif",
+	default:
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  http.StatusServiceUnavailable,
+			"message": "Server sibuk, coba lagi sebentar",
 		})
 		return
 	}
+}
 
-	safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
-	srcPath := filepath.Join(UploadDir, safeFilename)
+func (h *ImageHandler) ResizeImage(c *gin.Context) {
 
-	os.MkdirAll(UploadDir, 0755)
+	select {
+	case h.semaphore <- struct{}{}:
+		defer func() { <-h.semaphore }()
 
-	if err := c.SaveUploadedFile(file, srcPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError, "message": "Gagal menyimpan file", "error": err.Error()})
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"status": http.StatusBadRequest, "message": "File wajib diupload", "error": err.Error()})
+			return
+		}
+
+		widthStr := c.PostForm("width")
+		heightStr := c.PostForm("height")
+
+		width, errW := strconv.Atoi(widthStr)
+		height, errH := strconv.Atoi(heightStr)
+
+		if errW != nil || errH != nil || width <= 0 || height <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "Width dan Height harus berupa angka positif",
+			})
+			return
+		}
+		if width > h.config.Image.MaxDimension || height > h.config.Image.MaxDimension {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  http.StatusBadRequest,
+				"message": fmt.Sprintf("Width dan Height maksimal %d px", h.config.Image.MaxDimension),
+			})
+			return
+		}
+
+		safeFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(file.Filename))
+		srcPath := filepath.Join(h.config.Storage.UploadDir, safeFilename)
+
+		os.MkdirAll(h.config.Storage.UploadDir, 0755)
+
+		if err := c.SaveUploadedFile(file, srcPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError, "message": "Gagal menyimpan file", "error": err.Error()})
+			return
+		}
+		defer os.Remove(srcPath)
+
+		resultPath, err := services.ProcessImageResize(srcPath, width, height)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError, "message": "Gagal resize gambar", "error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  http.StatusOK,
+			"message": "Resize berhasil",
+			"data": gin.H{
+				"original_file": file.Filename,
+				"result_path":   resultPath,
+				"width":         width,
+				"height":        height,
+			},
+		})
+
+	default:
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  http.StatusServiceUnavailable,
+			"message": "Server sibuk, coba lagi sebentar",
+		})
 		return
 	}
-
-	resultPath, err := services.ProcessImageResize(srcPath, width, height)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": http.StatusInternalServerError, "message": "Gagal resize gambar", "error": err.Error()})
-		return
-	}
-	defer os.Remove(srcPath)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  http.StatusOK,
-		"message": "Resize berhasil",
-		"data": gin.H{
-			"original_file": file.Filename,
-			"result_path":   resultPath,
-			"width":         width,
-			"height":        height,
-		},
-	})
 }

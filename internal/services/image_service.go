@@ -12,20 +12,22 @@ import (
 
 func ProcessImageConversion(inputPath string, targetFormat string) (string, error) {
 
-	// open file input
+	// input
 	img, _, err := utils.LoadImage(inputPath)
 	if err != nil {
 		return "", err
 	}
+
+	// process
 	filename := filepath.Base(inputPath)
 	ext := filepath.Ext(filename)
 	nameWithoutExt := strings.TrimSuffix(filename, ext)
 
+	// output
 	outputDir := "./temp/processed"
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		os.MkdirAll(outputDir, 0755)
 	}
-
 	newFilename := fmt.Sprintf("%s.%s", nameWithoutExt, strings.ToLower(targetFormat))
 	outputPath := filepath.Join(outputDir, newFilename)
 
@@ -50,7 +52,6 @@ func ProcessImageCompression(inputPath string, quality int) (string, error) {
 	newFilename := fmt.Sprintf("%s_compressed.%s", strings.TrimSuffix(filename, filepath.Ext(filename)), format)
 	outputPath := filepath.Join(outputDir, newFilename)
 
-	// 2. Encode image
 	if err := utils.SaveImage(img, outputPath, format, quality); err != nil {
 		return "", err
 	}
@@ -59,12 +60,10 @@ func ProcessImageCompression(inputPath string, quality int) (string, error) {
 
 func ProcessImageResize(inputPath string, width int, height int) (string, error) {
 
-	//1 . ambil file input
 	img, format, err := utils.LoadImage(inputPath)
 	if err != nil {
 		return "", err
 	}
-	//3. Resize image
 	resizedImg := imaging.Resize(img, width, height, imaging.Lanczos)
 
 	outputDir := "./temp/resized"

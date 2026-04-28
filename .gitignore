@@ -24,6 +24,10 @@ go.work.sum
 .idea/
 .vscode/
 
-
+.go
+.dockerignore
 /temp/*
+
+ig-cookies.txt
+youtube_cookies.txt
 

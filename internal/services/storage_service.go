@@ -5,4 +5,5 @@ const (
 	TempUploads    = "temp/uploads"
 	TempCompressed = "temp/compressed"
 	TempResized    = "temp/resized"
+	TempDownloads  = "temp/downloads"
 )

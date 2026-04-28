@@ -1,0 +1,6 @@
+[machine]
+  size = "shared-cpu-1x"
+  memory_mb = 256
+
+# Tambahkan ini untuk mencegah aplikasi mati (OOM) saat proses gambar
+swap_size_mb = 512

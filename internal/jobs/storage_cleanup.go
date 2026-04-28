@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,28 +20,28 @@ func StorageCleanup(dirs []string, maxAge time.Duration) *StorageCleaner {
 	}
 }
 
-// Fungsi internal untuk bersih-bersih
 func (s *StorageCleaner) clean() {
 	for _, dir := range s.Dirs {
-		// Gunakan WalkDir (lebih efisien dari Walk di Go modern)
-		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-			// 1. Handle Error akses file
+		if dir == "" {
+			continue
+		}
+		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				log.Println("⚠️ Error accessing:", path, err)
-				return nil // Lanjut ke file berikutnya
-			}
-
-			// 2. Skip jika itu adalah Folder (termasuk root folder temp/)
-			if info.IsDir() {
 				return nil
 			}
-
-			// 3. Logic Cek Umur File (Hanya jalan untuk FILE)
+			if d.IsDir() {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil {
+				return nil
+			}
 			if time.Since(info.ModTime()) > s.MaxAge {
 				if err := os.Remove(path); err == nil {
-					log.Println("🗑️ Deleted old file:", path)
+					log.Println("Deleted old file:", path)
 				} else {
-					log.Println("❌ Failed to delete:", path, err)
+					log.Println("Failed to delete:", path, err)
 				}
 			}
 			return nil
