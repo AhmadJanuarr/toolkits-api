@@ -26,13 +26,13 @@ WORKDIR /root/
 RUN apk update && \
     apk add --no-cache ffmpeg python3 curl nodejs && \
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp && \
-    yt-dlp -U
+    chmod a+rx /usr/local/bin/yt-dlp &&  
+  
     
 # Copy binary dari builder
 COPY --from=builder /app/main .
 
-# COPY --from=builder /app/.env .
+COPY --from=builder /app/.env .
 
 # Buat folder temp yang dibutuhkan aplikasi
 RUN mkdir -p temp/uploads temp/processed temp/compressed temp/resized temp/downloads/youtube temp/downloads/instagram temp/downloads/tiktok
