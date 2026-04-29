@@ -1,5 +1,5 @@
 # Stage 1: Build Stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install Compiler C yang dibutuhkan untuk library chai2010/webp
 RUN apk add --no-cache gcc musl-dev
