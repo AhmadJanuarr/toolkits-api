@@ -32,7 +32,6 @@ RUN apk update && \
 # Copy binary dari builder
 COPY --from=builder /app/main .
 
-COPY --from=builder /app/.env .
 
 # Buat folder temp yang dibutuhkan aplikasi
 RUN mkdir -p temp/uploads temp/processed temp/compressed temp/resized temp/downloads/youtube temp/downloads/instagram temp/downloads/tiktok
