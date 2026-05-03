@@ -1,7 +1,6 @@
 package config
 
 import (
-	"strings"
 	"time"
 	"toolkits/internal/utils"
 )
@@ -16,7 +15,7 @@ type ServerConfig struct {
 	Port                string
 	MaxMultipartMemory  int64
 	MaxGlobalConcurrent int
-	AllowedOrigins      string
+	AllowedOrigins      []string
 	AllowedMethods      []string
 	AllowedHeaders      []string
 	ExposeHeaders       []string
@@ -50,10 +49,10 @@ func LoadConfig() *Config {
 		Server: ServerConfig{
 			Port:                utils.GetEnv("PORT", "8080"),
 			MaxMultipartMemory:  utils.GetInt64("MAX_MULTIPART_MEMORY", 20<<20),
-			AllowedOrigins:      utils.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000"),
-			AllowedMethods:      strings.Split(utils.GetEnv("ALLOWED_METHODS", "GET, POST, PUT, DELETE, OPTIONS"), ","),
-			AllowedHeaders:      strings.Split(utils.GetEnv("ALLOWED_HEADERS", "Origin, Content-Type, Authorization"), ","),
-			ExposeHeaders:       strings.Split(utils.GetEnv("EXPOSE_HEADERS", "Content-Length, Content-Type, Content-Disposition"), ","),
+			AllowedOrigins:      utils.ParseList(utils.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000,https://toolkits-beta.vercel.app")),
+			AllowedMethods:      utils.ParseList(utils.GetEnv("ALLOWED_METHODS", "GET, POST, PUT, DELETE, OPTIONS")),
+			AllowedHeaders:      utils.ParseList(utils.GetEnv("ALLOWED_HEADERS", "Origin, Content-Type, Authorization, Accept")),
+			ExposeHeaders:       utils.ParseList(utils.GetEnv("EXPOSE_HEADERS", "Content-Length, Content-Type, Content-Disposition")),
 			MaxGlobalConcurrent: utils.GetInt("MAX_GLOBAL_CONCURRENT", 4),
 			RateLimitRPS:        2.0,
 			RateLimitBurst:      5,
