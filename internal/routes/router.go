@@ -18,10 +18,10 @@ func Route(cfg *config.Config) *gin.Engine {
 
 	// CORS CONFIGURATION
 
-	origins := cfg.Server.AllowedOrigins
+	// CORS CONFIGURATION
 
 	config := cors.Config{
-		AllowOrigins:     []string{origins},
+		AllowOrigins:     cfg.Server.AllowedOrigins,
 		AllowMethods:     cfg.Server.AllowedMethods,
 		AllowHeaders:     cfg.Server.AllowedHeaders,
 		ExposeHeaders:    cfg.Server.ExposeHeaders,
