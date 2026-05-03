@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -38,4 +39,14 @@ func GetDuration(key string, fallback time.Duration) time.Duration {
 		}
 	}
 	return fallback
+}
+
+func ParseList(value string) []string {
+	var result []string
+	for _, item := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
