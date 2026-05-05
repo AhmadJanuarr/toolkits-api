@@ -16,10 +16,6 @@ func Route(cfg *config.Config) *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	// CORS CONFIGURATION
-
-	// CORS CONFIGURATION
-
 	config := cors.Config{
 		AllowOrigins:     cfg.Server.AllowedOrigins,
 		AllowMethods:     cfg.Server.AllowedMethods,
