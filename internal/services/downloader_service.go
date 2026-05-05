@@ -56,9 +56,9 @@ func ProcessGetInfo(inputURL string) (*models.InfoResponse, error) {
 	}
 
 	if platform == "youtube" {
-		args = append([]string{"--cookies", "youtube_cookies.txt", "--js-runtimes", "node"}, args...)
+		args = append([]string{"--cookies", "/etc/secrets/youtube_cookies.txt", "--js-runtimes", "node"}, args...)
 	} else if platform == "instagram" {
-		args = append([]string{"--cookies", "ig-cookies.txt"}, args...)
+		args = append([]string{"--cookies", "/etc/secrets/ig-cookies.txt"}, args...)
 	}
 
 	cmd := exec.Command("yt-dlp", args...)
@@ -145,9 +145,9 @@ func ProsessDownload(inputURL string, formatID string) (string, error) {
 		inputURL}
 
 	if platform == "youtube" {
-		args = append([]string{"--cookies", "youtube_cookies.txt", "--js-runtimes", "node"}, args...)
+		args = append([]string{"--cookies", "/etc/secrets/youtube_cookies.txt", "--js-runtimes", "node"}, args...)
 	} else if platform == "instagram" {
-		args = append([]string{"--cookies", "ig-cookies.txt"}, args...)
+		args = append([]string{"--cookies", "/etc/secrets/ig-cookies.txt"}, args...)
 	}
 
 	cmd := exec.Command("yt-dlp", args...)
