@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"toolkits/internal/models"
+	"toolkits/internal/utils"
 )
 
 type ytdlpJSON struct {
@@ -56,9 +57,11 @@ func ProcessGetInfo(inputURL string) (*models.InfoResponse, error) {
 	}
 
 	if platform == "youtube" {
-		args = append([]string{"--cookies", "/etc/secrets/youtube_cookies.txt", "--js-runtimes", "node"}, args...)
+		cookiePath := utils.GetCookiePath("youtube")
+		args = append([]string{"--cookies", cookiePath, "--js-runtimes", "node"}, args...)
 	} else if platform == "instagram" {
-		args = append([]string{"--cookies", "/etc/secrets/ig-cookies.txt"}, args...)
+		cookiePath := utils.GetCookiePath("instagram")
+		args = append([]string{"--cookies", cookiePath}, args...)
 	}
 
 	cmd := exec.Command("yt-dlp", args...)
@@ -145,9 +148,11 @@ func ProsessDownload(inputURL string, formatID string) (string, error) {
 		inputURL}
 
 	if platform == "youtube" {
-		args = append([]string{"--cookies", "/etc/secrets/youtube_cookies.txt", "--js-runtimes", "node"}, args...)
+		cookiePath := utils.GetCookiePath("youtube")
+		args = append([]string{"--cookies", cookiePath, "--js-runtimes", "node"}, args...)
 	} else if platform == "instagram" {
-		args = append([]string{"--cookies", "/etc/secrets/ig-cookies.txt"}, args...)
+		cookiePath := utils.GetCookiePath("instagram")
+		args = append([]string{"--cookies", cookiePath}, args...)
 	}
 
 	cmd := exec.Command("yt-dlp", args...)
