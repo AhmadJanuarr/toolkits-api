@@ -49,7 +49,7 @@ func LoadConfig() *Config {
 		Server: ServerConfig{
 			Port:                utils.GetEnv("PORT", "8080"),
 			MaxMultipartMemory:  utils.GetInt64("MAX_MULTIPART_MEMORY", 20<<20),
-			AllowedOrigins:      utils.ParseList(utils.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000,https://toolkits-beta.vercel.app")),
+			AllowedOrigins:      utils.ParseList(utils.GetEnv("ALLOWED_ORIGINS", "http://localhost:5173,https://toolkits-beta.vercel.app")),
 			AllowedMethods:      utils.ParseList(utils.GetEnv("ALLOWED_METHODS", "GET, POST, PUT, DELETE, OPTIONS")),
 			AllowedHeaders:      utils.ParseList(utils.GetEnv("ALLOWED_HEADERS", "Origin, Content-Type, Authorization, Accept")),
 			ExposeHeaders:       utils.ParseList(utils.GetEnv("EXPOSE_HEADERS", "Content-Length, Content-Type, Content-Disposition")),
