@@ -225,16 +225,7 @@ func (h *ImageHandler) ResizeImage(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":  http.StatusOK,
-			"message": "Resize berhasil",
-			"data": gin.H{
-				"original_file": file.Filename,
-				"result_path":   resultPath,
-				"width":         width,
-				"height":        height,
-			},
-		})
+		c.File(resultPath)
 
 	default:
 		c.JSON(http.StatusServiceUnavailable, gin.H{
