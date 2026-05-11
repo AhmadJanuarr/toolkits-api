@@ -43,11 +43,11 @@ func (h *DownloaderHandler) Downloader(c *gin.Context) {
 			c.FileAttachment(cachedPath, fileName)
 			return
 		}
-		resultPath, err := services.ProsessDownload(inputURL, formatID)
+		resultPath, err := services.ProsessDownload(c.Request.Context(), inputURL, formatID)
 		if err != nil {
-			c.JSON(http.StatusForbidden, gin.H{
-				"status":  http.StatusForbidden,
-				"message": "Gagal mengunduh",
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Maaf, download gagal dikarenakan server waktu tunggu melebihi dari 30 detik, silahkan coba lagi",
 				"error":   err.Error(),
 			})
 			return
@@ -88,11 +88,11 @@ func (h *DownloaderHandler) DownloaderGetInfo(c *gin.Context) {
 			return
 		}
 
-		info, err := services.ProcessGetInfo(inputURL)
+		info, err := services.ProcessGetInfo(c.Request.Context(), inputURL)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status":  http.StatusInternalServerError,
-				"message": "Gagal mengambil informasi video",
+				"message": "Gagal mengambil informasi video, waktu tunggu melebihi batas 30 detik, silahkan coba lagi",
 				"error":   err.Error(),
 			})
 			return
