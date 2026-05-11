@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -47,7 +48,7 @@ func getPlatformFromURL(inputURL string) string {
 	}
 }
 
-func ProcessGetInfo(inputURL string) (*models.InfoResponse, error) {
+func ProcessGetInfo(ctx context.Context, inputURL string) (*models.InfoResponse, error) {
 
 	platform := getPlatformFromURL(inputURL)
 	args := []string{"-J", "--no-playlist", "--no-warnings", "--force-ipv4", inputURL}
@@ -58,13 +59,20 @@ func ProcessGetInfo(inputURL string) (*models.InfoResponse, error) {
 
 	if platform == "youtube" {
 		cookiePath := utils.GetCookiePath("youtube")
-		args = append([]string{"--cookies", cookiePath, "--js-runtimes", "node"}, args...)
+		var ytArgs []string
+		if cookiePath != "" {
+			ytArgs = append(ytArgs, "--cookies", cookiePath)
+		}
+		ytArgs = append(ytArgs, "--js-runtimes", "node")
+		args = append(ytArgs, args...)
 	} else if platform == "instagram" {
 		cookiePath := utils.GetCookiePath("instagram")
-		args = append([]string{"--cookies", cookiePath}, args...)
+		if cookiePath != "" {
+			args = append([]string{"--cookies", cookiePath}, args...)
+		}
 	}
 
-	cmd := exec.Command("yt-dlp", args...)
+	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
 
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -121,7 +129,7 @@ func ProcessGetInfo(inputURL string) (*models.InfoResponse, error) {
 	return info, nil
 }
 
-func ProsessDownload(inputURL string, formatID string) (string, error) {
+func ProsessDownload(ctx context.Context, inputURL string, formatID string) (string, error) {
 
 	platform := getPlatformFromURL(inputURL)
 	currentDir, err := os.Getwd()
@@ -149,13 +157,20 @@ func ProsessDownload(inputURL string, formatID string) (string, error) {
 
 	if platform == "youtube" {
 		cookiePath := utils.GetCookiePath("youtube")
-		args = append([]string{"--cookies", cookiePath, "--js-runtimes", "node"}, args...)
+		var ytArgs []string
+		if cookiePath != "" {
+			ytArgs = append(ytArgs, "--cookies", cookiePath)
+		}
+		ytArgs = append(ytArgs, "--js-runtimes", "node")
+		args = append(ytArgs, args...)
 	} else if platform == "instagram" {
 		cookiePath := utils.GetCookiePath("instagram")
-		args = append([]string{"--cookies", cookiePath}, args...)
+		if cookiePath != "" {
+			args = append([]string{"--cookies", cookiePath}, args...)
+		}
 	}
 
-	cmd := exec.Command("yt-dlp", args...)
+	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
