@@ -21,6 +21,7 @@ type ServerConfig struct {
 	ExposeHeaders       []string
 	RateLimitRPS        float64
 	RateLimitBurst      int
+	ReadTimeout         time.Duration
 }
 type ImageConfig struct {
 	MaxFileSize  int64
@@ -56,6 +57,7 @@ func LoadConfig() *Config {
 			MaxGlobalConcurrent: utils.GetInt("MAX_GLOBAL_CONCURRENT", 4),
 			RateLimitRPS:        2.0,
 			RateLimitBurst:      5,
+			ReadTimeout:         30 * time.Second,
 		},
 		Image: ImageConfig{
 			MaxFileSize:    utils.GetInt64("MAX_FILE_SIZE", 5<<20),
