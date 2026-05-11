@@ -41,7 +41,6 @@ func main() {
 	cleaner.Start()
 
 	router := routes.Route(cfg)
-
 	router.MaxMultipartMemory = cfg.Server.MaxMultipartMemory
 
 	log.Println("Server running on port:", cfg.Server.Port)
