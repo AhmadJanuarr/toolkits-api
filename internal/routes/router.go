@@ -25,7 +25,7 @@ func Route(cfg *config.Config) *gin.Engine {
 	}
 
 	router.Use(cors.New(config))
-
+	router.Use(middlewares.TimeoutMiddleware(cfg.Server.ReadTimeout))
 	router.Use(middlewares.RateLimitMiddleware(cfg.Server.RateLimitRPS, cfg.Server.RateLimitBurst))
 	globalLimit := make(chan struct{}, cfg.Server.MaxGlobalConcurrent)
 
