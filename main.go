@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"toolkits/internal/config"
 	"toolkits/internal/jobs"
@@ -12,7 +13,6 @@ import (
 
 func main() {
 
-	// load .env
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
@@ -41,8 +41,9 @@ func main() {
 	cleaner.Start()
 
 	router := routes.Route(cfg)
-	router.MaxMultipartMemory = cfg.Server.MaxMultipartMemory
-
 	log.Println("Server running on port:", cfg.Server.Port)
-	router.Run(":" + cfg.Server.Port)
+	err := http.ListenAndServe(":"+cfg.Server.Port, router)
+	if err != nil {
+		log.Fatalf("Server gagal di jalankan: %v", err)
+	}
 }
