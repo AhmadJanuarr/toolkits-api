@@ -1,87 +1,65 @@
-# API Documentation
+# Madlab Toolkits API (Backend)
 
-Base URL: `http://localhost:8080/api/v1`
+Halo! Selamat datang di repo backend **Madlab Toolkits**. Singkatnya, ini adalah API serbaguna yang dibangun murni menggunakan Golang. Gak ada framework web tebal kayak Gin atau Fiber di sini, semuanya jalan di atas _Standard Library_ (`net/http`) bawaan Go.
+
+Tujuannya simpel: bikin backend yang enteng, kenceng, minim _dependency_, dan gampang di-maintain buat ngurusin manipulasi gambar dan download media.
 
 ---
 
-## 1. Convert Image
+## Spesifikasi Mesin
 
-Mengubah format gambar dari satu format ke format lain (JPG, PNG, WebP).
+- **Bahasa**: Golang versi `1.25.0`
+- **Routing**: Pakai bawaan Go `net/http` (sudah pakai fitur routing _method_ HTTP yang ada sejak Go 1.22)
+- **Struktur Kode**: Dibikin rapi dan modular (`handlers`, `middlewares`, `services`, dll) biar gampang kalau mau nambah fitur baru ke depannya.
 
-- **Endpoint**: `/image/convert`
-- **Method**: `POST`
-- **Content-Type**: `multipart/form-data`
+---
 
-### Request Parameters
+## Library yang Dipakai
 
-| Key            | Type   | Required | Description                                   |
-| -------------- | ------ | -------- | --------------------------------------------- |
-| `file`         | File   | **Yes**  | File gambar yang akan dikonversi (Max 5MB).   |
-| `targetFormat` | String | **Yes**  | Format tujuan. Pilihan: `jpg`, `png`, `webp`. |
+Walaupun nggak pakai framework utama, project ini tetep butuh beberapa alat bantu khusus buat ngerjain tugas-tugas berat:
 
-### Success Response (200 OK)
+- [`disintegration/imaging`](https://github.com/disintegration/imaging): Buat ngurusin urusan potong-memotong, _resize_, dan manipulasi resolusi gambar.
+- [`chai2010/webp`](https://github.com/chai2010/webp): Biar backend kita jago nge-_encode_ dan _decode_ gambar berformat WebP.
+- [`joho/godotenv`](https://github.com/joho/godotenv): Buat baca konfigurasi dari file `.env` biar aman dan gampang diatur tiap pindah _environment_.
+- [`golang.org/x/time`](https://pkg.go.dev/golang.org/x/time): Library bawaan tambahan dari Go buat bikin fitur _Rate Limiting_ (biar API kita gak gampang di-spam sama orang).
 
-```MD
-{
-  "data": {
-    "format": "jpg",
-    "original_file": "surface-laptop-5-stock-blue-abstract-dark-background-3840x2400-9055.jpg",
-    "result_path": "temp/processed/1772262263-surface-laptop-5-stock-blue-abstract-dark-background-3840x2400-9055.jpg"
-  },
-  "message": "Konversi berhasil",
-  "status": 200
-}
-```
+---
 
-## 2. Compression Image
+## Tech Stack & Deployment
 
-Mengkompresi gambar dengan quality sesuai dengan user
+- **Deployment**: Bisa jalan di VPS biasa dan Render.
+- **Container**: Udah dibungkus pakai Docker (`Dockerfile` udah rapi), jadi tinggal _build and run_ di mana aja tanpa ribet ngurus _environment_.
+- **Tools Tambahan**: Fitur downloader di API ini bergantung banget sama **`yt-dlp`**. Jadi pastikan `yt-dlp` udah ter-install di server/Docker-nya buat nyedot video/audio dari sosmed kayak YouTube atau IG.
 
-- **Endpoint** : `/image/compress-image`
-- **Method** : `POST`
-- **Content-Type**: `multipart/form-data`
+---
 
-### Request Parameters
+## Fitur yang Udah Dibikin
 
-| Key       | Type | Required | Description                          |
-| --------- | ---- | -------- | ------------------------------------ |
-| `file`    | File | **Yes**  | Tidak ada batas maksimal size gambar |
-| `quality` | Int  | **Yes**  | Quality 1 > 100.                     |
+Ada dua kelompok fitur utama yang bisa dipakai di API ini:
 
-### Success Response (200 OK)
+### 1. Image Toolkit (Tukang Gambar)
 
-```MD
-{
-    "data": {
-        "original_file": "blue-abstract-3840x2160-25119.jpg",
-        "quality": 60,
-        "result_path": "temp/compressed/1770779587-blue-abstract-3840x2160-25119_compressed.jpeg"
-    },
-    "message": "Kompresi berhasil",
-    "status": 200
-}
-```
+Kumpulan endpoint buat ngoprek gambar. Semuanya butuh dikirim lewat format form upload (`multipart/form-data`).
 
-### Error Response (400 Bad Request)
+- **Convert Image** (`POST /api/v1/image/convert`): Tinggal upload gambar, terus pilih mau diubah formatnya jadi `JPG`, `PNG`, atau `WebP`.
+- **Compress Image** (`POST /api/v1/image/compress-image`): Buat ngecilin ukuran (_size_) file gambar. Kualitasnya (`quality`) bisa diatur manual dari angka 1 sampai 100.
+- **Resize Image** (`POST /api/v1/image/resize-image`): Buat ngubah dimensi/resolusi gambar. Tinggal masukin aja `width` (lebar) dan `height` (tinggi) yang dimau.
 
-quality tidak berupa int
+### 2. Media Downloader (Tukang Sedot Media)
 
-```MD
-{
-    "error": "strconv.Atoi: parsing \"60d\": invalid syntax",
-    "message": "Quality harus berupa angka",
-    "status": 400
-}
-```
+Endpoint buat narik video/audio dari platform luar.
 
-### Error Response (400 Bad Request)
+- **Get Info** (`POST /api/v1/downloader/info`): Buat ngintip detail video dari URL (bakal dapet info judul, _thumbnail_, sama daftar resolusi yang tersedia) memanfaatkan _engine_ `yt-dlp`.
+- **Download File** (`POST /api/v1/downloader/download`): Buat langsung nyedot file dari URL dengan masukin `format_id`-nya. Nanti filenya bakal otomatis ke-download ke perangkat pengguna.
 
-file gambar tidak ditemukan
+---
 
-```MD
-{
-    "error": "http: no such file",
-    "message": "File tidak ditemukan atau tidak valid",
-    "status": 400
-}
-```
+## Extra Keamanan (Custom Middleware)
+
+Karena nggak pake framework web, semua _security layer_ dan _middleware_ dibikin manual pakai Go murni (dan ini seru banget!):
+
+- **CORS Middleware**: Biar frontend tetep bisa narik data dengan aman tanpa kena blokir sama browser.
+- **Rate Limiter**: IP yang terlalu barbar bakal dibatesin jumlah _request_-nya biar server nggak _down_ gara-gara terlalu sibuk.
+- **Timeout Middleware**: Kalau ada proses yang nyangkut dan kelamaan (misal download gagal putus di tengah jalan), koneksinya otomatis digagalkan.
+- **Logger**: Semua API yang di-hit bakal otomatis dicatet di terminal beserta waktu prosesnya.
+- **Auto Cleanup**: Punya fungsi _job_ kecil di _background_ yang rajin ngehapusin file-file sampah hasil sisa kompres/download biar _storage_ server nggak gampang penuh.
