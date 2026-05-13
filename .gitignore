@@ -23,8 +23,8 @@ go.work.sum
 # e.g., for GoLand, VS Code, etc.
 .idea/
 .vscode/
-
 .go
+
 .dockerignore
 /temp/*
 
