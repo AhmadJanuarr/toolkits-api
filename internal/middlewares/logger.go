@@ -1,18 +1,18 @@
 package middlewares
 
 import (
-	"context"
+	"log"
 	"net/http"
 	"time"
 )
 
-func TimeoutMiddleware(timeDuration time.Duration) func(http.Handler) http.Handler {
+func LoggerMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx, cancel := context.WithTimeout(r.Context(), timeDuration)
-			defer cancel()
-			r = r.WithContext(ctx)
+			start := time.Now()
 			next.ServeHTTP(w, r)
+			duration := time.Since(start)
+			log.Printf("[API HIT] %s | %s | %v", r.Method, r.URL.Path, duration)
 		})
 	}
 }

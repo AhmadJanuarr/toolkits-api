@@ -3,8 +3,8 @@ package middlewares
 import (
 	"net/http"
 	"sync"
+	"toolkits/internal/utils"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
 
@@ -45,22 +45,20 @@ func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
-func RateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
+func RateLimitMiddleware(rps float64, burst int) func(http.Handler) http.Handler {
 	limiter := NewIPRateLimiter(rate.Limit(rps), burst)
-
-	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		limiterForIP := limiter.GetLimiter(ip)
-
-		if !limiterForIP.Allow() {
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"status":  http.StatusTooManyRequests,
-				"message": "Terlalu banyak permintaan, silahkan tunggu sebentar",
-			})
-			c.Abort()
-			return
-		}
-		c.Next()
-
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := r.RemoteAddr
+			limiterForIP := limiter.GetLimiter(ip)
+			if !limiterForIP.Allow() {
+				utils.JSONResponse(w, http.StatusTooManyRequests, map[string]any{
+					"status":  http.StatusTooManyRequests,
+					"message": "Terlalu banyak permintaan, silahkan tunggu sebentar",
+				})
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 }

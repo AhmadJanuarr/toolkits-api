@@ -64,7 +64,7 @@ func ProcessImageResize(inputPath string, width int, height int) (string, error)
 	if err != nil {
 		return "", err
 	}
-	resizedImg := imaging.Resize(img, width, height, imaging.Lanczos)
+	resizedImg := imaging.Fill(img, width, height, imaging.Center, imaging.Lanczos)
 
 	outputDir := "./temp/resized"
 	os.MkdirAll(outputDir, 0755)

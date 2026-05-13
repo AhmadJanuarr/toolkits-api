@@ -1,48 +1,32 @@
 package routes
 
 import (
+	"net/http"
 	"toolkits/internal/config"
 	"toolkits/internal/handlers"
 
 	"toolkits/internal/middlewares"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
-func Route(cfg *config.Config) *gin.Engine {
+func Route(cfg *config.Config) http.Handler {
 
-	router := gin.New()
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
+	mux := http.NewServeMux()
 
-	config := cors.Config{
-		AllowOrigins:     cfg.Server.AllowedOrigins,
-		AllowMethods:     cfg.Server.AllowedMethods,
-		AllowHeaders:     cfg.Server.AllowedHeaders,
-		ExposeHeaders:    cfg.Server.ExposeHeaders,
-		AllowCredentials: true,
-	}
-
-	router.Use(cors.New(config))
-	router.Use(middlewares.TimeoutMiddleware(cfg.Server.ReadTimeout))
-	router.Use(middlewares.RateLimitMiddleware(cfg.Server.RateLimitRPS, cfg.Server.RateLimitBurst))
 	globalLimit := make(chan struct{}, cfg.Server.MaxGlobalConcurrent)
-
 	imgHandler := handlers.NewImageHandler(cfg, globalLimit)
 	downloaderHandler := handlers.NewDownloaderHandler(cfg, globalLimit)
-	// ROUTES
 
-	v1 := router.Group("/api/v1")
+	mux.HandleFunc("POST /api/v1/image/convert", imgHandler.ConvertImage)
+	mux.HandleFunc("POST /api/v1/image/compress-image", imgHandler.CompressionImage)
+	mux.HandleFunc("POST /api/v1/image/resize-image", imgHandler.ResizeImage)
 
-	// Image endpoints
-	v1.POST("/image/convert", imgHandler.ConvertImage)
-	v1.POST("/image/compress-image", imgHandler.CompressionImage)
-	v1.POST("/image/resize-image", imgHandler.ResizeImage)
+	mux.HandleFunc("POST /api/v1/downloader/info", downloaderHandler.DownloaderGetInfo)
+	mux.HandleFunc("POST /api/v1/downloader/download", downloaderHandler.Downloader)
 
-	// Youtube
-	v1.POST("/downloader/info", downloaderHandler.DownloaderGetInfo)
-	v1.POST("/downloader/download", downloaderHandler.Downloader)
-
-	return router
+	var handler http.Handler = mux
+	handler = middlewares.CORSMiddleware(cfg)(handler)
+	handler = middlewares.RateLimitMiddleware(cfg.Server.RateLimitRPS, cfg.Server.RateLimitBurst)(handler)
+	handler = middlewares.TimeoutMiddleware(cfg.Server.ReadTimeout)(handler)
+	handler = middlewares.LoggerMiddleware()(handler)
+	return handler
 }

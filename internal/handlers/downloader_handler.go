@@ -7,8 +7,6 @@ import (
 	"toolkits/internal/config"
 	"toolkits/internal/services"
 	"toolkits/internal/utils"
-
-	"github.com/gin-gonic/gin"
 )
 
 type DownloaderHandler struct {
@@ -23,29 +21,30 @@ func NewDownloaderHandler(cfg *config.Config, sem chan struct{}) *DownloaderHand
 	}
 }
 
-func (h *DownloaderHandler) Downloader(c *gin.Context) {
+func (h *DownloaderHandler) Downloader(w http.ResponseWriter, r *http.Request) {
 	select {
 	case h.semaphore <- struct{}{}:
 		defer func() { <-h.semaphore }()
 
-		inputURL := c.PostForm("inputURL")
-		formatID := c.PostForm("format_id")
+		inputURL := r.FormValue("inputURL")
+		formatID := r.FormValue("format_id")
 		if inputURL == "" || formatID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
+			utils.JSONResponse(w, http.StatusBadRequest, map[string]interface{}{
 				"status":  http.StatusBadRequest,
-				"message": "inputURL dan FormatID tidak boleh kosong",
+				"message": "Input dan FormatID tidak boleh kosong",
 			})
 			return
 		}
 		cacheKey := inputURL + "_" + formatID
 		if cachedPath, exists := utils.FileCache.Get(cacheKey); exists {
 			fileName := filepath.Base(cachedPath)
-			c.FileAttachment(cachedPath, fileName)
+			w.Header().Set("Content-Disposition", "attachment; filename=\""+fileName+"\"")
+			http.ServeFile(w, r, cachedPath)
 			return
 		}
-		resultPath, err := services.ProsessDownload(c.Request.Context(), inputURL, formatID)
+		resultPath, err := services.ProsessDownload(r.Context(), inputURL, formatID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			utils.JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{
 				"status":  http.StatusInternalServerError,
 				"message": "Maaf, download gagal dikarenakan server waktu tunggu melebihi dari 30 detik, silahkan coba lagi",
 				"error":   err.Error(),
@@ -53,27 +52,26 @@ func (h *DownloaderHandler) Downloader(c *gin.Context) {
 			return
 		}
 		utils.FileCache.Set(cacheKey, resultPath)
-		fileName := filepath.Base(resultPath)
-		c.FileAttachment(resultPath, fileName)
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(resultPath)+"\"")
+		http.ServeFile(w, r, resultPath)
 
 	default:
-		c.JSON(http.StatusServiceUnavailable, gin.H{
+		utils.JSONResponse(w, http.StatusServiceUnavailable, map[string]interface{}{
 			"status":  http.StatusServiceUnavailable,
 			"message": "Server sibuk, coba lagi sebentar",
 		})
-		return
 	}
 }
 
-func (h *DownloaderHandler) DownloaderGetInfo(c *gin.Context) {
+func (h *DownloaderHandler) DownloaderGetInfo(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case h.semaphore <- struct{}{}:
 		defer func() { <-h.semaphore }()
 		//
-		inputURL := c.PostForm("inputURL")
+		inputURL := r.FormValue("inputURL")
 		if strings.Contains(inputURL, "/photo/") {
-			c.JSON(http.StatusBadRequest, gin.H{
+			utils.JSONResponse(w, http.StatusBadRequest, map[string]interface{}{
 				"status":  http.StatusBadRequest,
 				"message": "Maaf, untuk saat ini format tiktok berupa slide foto belum mendukung",
 			})
@@ -81,31 +79,31 @@ func (h *DownloaderHandler) DownloaderGetInfo(c *gin.Context) {
 		}
 
 		if inputURL == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
+			utils.JSONResponse(w, http.StatusBadRequest, map[string]interface{}{
 				"status":  http.StatusBadRequest,
 				"message": "inputURL tidak boleh kosong atau tidak valid",
 			})
 			return
 		}
 
-		info, err := services.ProcessGetInfo(c.Request.Context(), inputURL)
+		info, err := services.ProcessGetInfo(r.Context(), inputURL)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			utils.JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{
 				"status":  http.StatusInternalServerError,
 				"message": "Gagal mengambil informasi video, waktu tunggu melebihi batas 30 detik, silahkan coba lagi",
 				"error":   err.Error(),
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
+		utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
 			"status":  http.StatusOK,
 			"message": "Informasi video berhasil diambil",
-			"data": gin.H{
+			"data": map[string]interface{}{
 				"info": info,
 			},
 		})
 	default:
-		c.JSON(http.StatusServiceUnavailable, gin.H{
+		utils.JSONResponse(w, http.StatusServiceUnavailable, map[string]interface{}{
 			"status":  http.StatusServiceUnavailable,
 			"message": "Server sibuk, coba lagi sebentar",
 		})
