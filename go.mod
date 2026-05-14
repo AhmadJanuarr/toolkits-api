@@ -8,6 +8,6 @@ require (
 	golang.org/x/time v0.15.0
 )
 
-require golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
+require golang.org/x/image v0.40.0 // indirect
 
 require github.com/disintegration/imaging v1.6.2
