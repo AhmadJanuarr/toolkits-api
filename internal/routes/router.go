@@ -23,7 +23,7 @@ func Route(cfg *config.Config) http.Handler {
 	proxyHandler := handlers.NewProxyHandler()
 
 	mux.HandleFunc("POST /api/v1/downloader/info", downloaderHandler.DownloaderGetInfo)
-	mux.HandleFunc("POST /api/v1/downloader/download", downloaderHandler.Downloader)
+	mux.HandleFunc("GET /api/v1/downloader/download", downloaderHandler.Downloader)
 	mux.HandleFunc("GET /api/v1/proxy/image", proxyHandler.ProxyImage)
 
 	var handler http.Handler = mux
