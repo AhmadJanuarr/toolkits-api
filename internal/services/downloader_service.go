@@ -153,6 +153,8 @@ func ProsessDownload(ctx context.Context, inputURL string, formatID string) (str
 		"--no-mtime",
 		"--no-warnings",
 		"--force-ipv4",
+		"--downloader", "aria2c",
+		"--downloader-args", "aria2c:-x 16 -s 16 -k 1M",
 		inputURL}
 
 	if platform == "youtube" {
@@ -182,3 +184,44 @@ func ProsessDownload(ctx context.Context, inputURL string, formatID string) (str
 	finalPath := strings.TrimSpace(out.String())
 	return finalPath, nil
 }
+
+// func GetDirecDownloadURL(ctx context.Context, inputURL string, formatID string) (string, error) {
+// 	args := []string{
+// 		"-f", formatID,
+// 		"--get-url",
+// 		"--no-warnings",
+// 		inputURL,
+// 	}
+
+// 	platform := getPlatformFromURL(inputURL)
+// 	if platform == "youtube" {
+// 		cookiePath := utils.GetCookiePath("youtube")
+// 		if cookiePath != "" {
+// 			args = append([]string{"--cookies", cookiePath}, args...)
+// 		}
+// 		args = append(args, "--js-runtimes", "node")
+// 	} else if platform == "instagram" {
+// 		cookiePath := utils.GetCookiePath("instagram")
+// 		if cookiePath != "" {
+// 			args = append([]string{"--cookies", cookiePath}, args...)
+// 		}
+// 	}
+// 	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+// 	var out bytes.Buffer
+// 	var stderr bytes.Buffer
+// 	cmd.Stdout = &out
+// 	cmd.Stderr = &stderr
+
+// 	if err := cmd.Run(); err != nil {
+// 		fmt.Printf("ERROR yt-dlp : %s\n", stderr.String())
+// 		return "", fmt.Errorf("Gagal mendapatkan Link : %v, log : %s", err, stderr.String())
+// 	}
+
+// 	urls := strings.Split(strings.TrimSpace(out.String()), "\n")
+// 	if len(urls) == 0 || urls[0] == "" {
+// 		return "", fmt.Errorf("Tidak mendapatkan direct URL")
+
+// 	}
+
+// 	return urls[0], nil
+// }
