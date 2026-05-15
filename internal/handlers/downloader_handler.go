@@ -52,9 +52,13 @@ func (h *DownloaderHandler) Downloader(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		utils.FileCache.Set(cacheKey, resultPath)
+		http.SetCookie(w, &http.Cookie{
+			Name:  "download_ready",
+			Value: "1",
+			Path:  "/",
+		})
 		w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(resultPath)+"\"")
 		http.ServeFile(w, r, resultPath)
-
 	default:
 		utils.JSONResponse(w, http.StatusServiceUnavailable, map[string]interface{}{
 			"status":  http.StatusServiceUnavailable,
