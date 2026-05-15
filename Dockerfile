@@ -24,7 +24,7 @@ FROM alpine:latest
 WORKDIR /root/
 
 RUN apk update && \
-    apk add --no-cache ffmpeg python3 curl nodejs && \
+    apk add --no-cache ffmpeg python3 curl nodejs aria2 && \
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod a+rx /usr/local/bin/yt-dlp    
   
